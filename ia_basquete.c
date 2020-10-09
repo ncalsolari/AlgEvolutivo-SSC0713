@@ -624,8 +624,6 @@ float tempoteste = 0.00;
                 sprintf(indice_convertido, "%d", j);
                // fprintf(arq_grafico,"%s,",indice_convertido);
                 fprintf(arq_grafico,"%s,",distancia_convertido);
-                 printf("%f\n", vetor_cesta_acertotxt[j]); 
-                printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");  
                  vetor_cesta_acertotxt[j]=1000;
 
             }
