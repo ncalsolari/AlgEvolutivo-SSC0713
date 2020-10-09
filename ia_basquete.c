@@ -8,7 +8,7 @@
 #define GLFW_INCLUDE_NONE
 #define GLFW_FALSE   0
 #define speed_time 0.005
-#define populacao  100
+#define populacao  10
 
 
 #include <GLFW/glfw3.h> /* verifique no seu SO onde fica o glfw3.h */
@@ -17,6 +17,7 @@
 #include <math.h>
 
  
+
 
 // variaveis globais
 typedef struct{
@@ -41,21 +42,25 @@ float g = 10;
     float vetor_forca_original[populacao];
     float vetor_theta[populacao];
     float vetor_cesta_acerto[populacao];
+    float vetor_cesta_acertotxt[populacao];
     float vetor_melhor_todos[2]; // coluna 0 o indice coluna 1 o valor
     float distanciax;
     float distanciay;
     float subindo[populacao];
     float pi = 3.14;
     float percent_mutacao = 0.02;
-    int count_geracao = 0;
+    int count_geracao = 1;
 
 static void nova_geracao(){
-    printf("melhor[%f]: %f\n",vetor_melhor_todos[0], vetor_melhor_todos[1] );
+
+
+    printf("melhor[%.0f]: %f\n\n\n",vetor_melhor_todos[0], vetor_melhor_todos[1] );
     int ind_melhor;
     float theta_melhor;
     float forca_melhor;
     int chance_mutacao;
     int gene_mutado;
+    srand(time(NULL));
 
     ind_melhor = vetor_melhor_todos[0];
 
@@ -70,21 +75,25 @@ static void nova_geracao(){
 
         if(j!= ind_melhor){
             vetor_cesta_acerto[j]=100; //zero a avaliacao 
+           // vetor_cesta_acertotxt[j]=100; //zero a avaliacao 
             vetor_theta[j]= (vetor_theta[j] + theta_melhor) / 2;
             vetor_forca_original[j]= (vetor_forca_original[j] + forca_melhor)/2;
         }
 
 
     }
-
+    
     //MUTACAO E REARRANJO DA POPULACAO
     for(int j=0; j<populacao; j++){
 
-        srand(time(NULL));
+       // srand(time(NULL));
        
 
          chance_mutacao = rand()%100;
          gene_mutado = rand()%100;
+        
+        
+  
 
          
          if(j != ind_melhor){
@@ -135,7 +144,7 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
     if(key==264) t_y -= 0.1; // tecla para baixo
 
     if(key==32 && action == GLFW_PRESS){
-         printf("Geracao %d\nTaxa de mutacao %f\nDistancia do melhor %f\n\n\n", count_geracao,percent_mutacao,vetor_melhor_todos[1]);
+         printf("\nGeracao %d\nTaxa de mutacao %f\nDistancia do melhor %f\n", count_geracao,percent_mutacao,vetor_melhor_todos[1]);
          //printf("Melhor[%f]: %f\n",vetor_melhor_todos[0], vetor_melhor_todos[1] );
         // printf("angulo %f forca %f\n",vetor_theta[(int)vetor_melhor_todos[0]], vetor_forca_original[(int)vetor_melhor_todos[0]] );
         count_geracao ++;
@@ -172,6 +181,15 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
 
  
 int main(void){
+
+    // abrindo arquivo
+    FILE *arq_grafico = fopen("graficoevolucao1.txt","w");
+    char distancia_convertido[20];
+    char indice_convertido[10];
+    fprintf(arq_grafico,"0,1,2,3,4,5,6,7,8,9\n");
+    
+
+    
  
     // inicicializando o sistema de\ janelas
     glfwInit();
@@ -575,6 +593,8 @@ int main(void){
         matriz_quina_acerto[j][0]=0;
 
         vetor_cesta_acerto[j]=1000;
+        vetor_cesta_acertotxt[j]=1000;
+       
 
     }
 
@@ -586,6 +606,7 @@ int main(void){
     float B = 1;
 
     float aux;
+    int controle_print1 = -1;
    
 
     vetor_melhor_todos[0]=-10;
@@ -596,6 +617,25 @@ int main(void){
     
 float tempoteste = 0.00;
     while (!glfwWindowShouldClose(window) ){
+
+        if(controle_print1 != count_geracao){// printar a primeira vez, dps ele printa no clique do espaço
+            for(int j=0;j<populacao;j++){
+                sprintf(distancia_convertido, "%.5f", vetor_cesta_acertotxt[j] );
+                sprintf(indice_convertido, "%d", j);
+               // fprintf(arq_grafico,"%s,",indice_convertido);
+                fprintf(arq_grafico,"%s,",distancia_convertido);
+                 printf("%f\n", vetor_cesta_acertotxt[j]); 
+                printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");  
+                 vetor_cesta_acertotxt[j]=1000;
+
+            }
+
+            fprintf(arq_grafico,"\n"); 
+            
+
+            controle_print1 = count_geracao;
+        }
+
        // printf("TRANSLADO EM X DA BOLA 0: %f  TRANSLADO EM Y DA BOLA 0: %f\n",matriz_translado[0][0],matriz_translado[0][1] );
         tempoteste = tempoteste + 0.001;
       //printf("tempo %f\n",tempoteste );
@@ -648,6 +688,10 @@ float tempoteste = 0.00;
             float distanciay = fabsf(matriz_cesta_atual[j][1]-matriz_bola_atual[j][1]);
             vetor_cesta_acerto[j]= sqrt(distanciax*distanciax + distanciay*distanciay);
            
+            if(vetor_cesta_acerto[j]<vetor_cesta_acertotxt[j]){
+                vetor_cesta_acertotxt[j] = vetor_cesta_acerto[j];
+               
+            }
 
             //atualizo melhor de todos
             if(vetor_cesta_acerto[j]<vetor_melhor_todos[1] && subindo[j] < 0){
@@ -827,12 +871,15 @@ float tempoteste = 0.00;
 
             }
 
+           
 
 
 
 
 
-             for(int j = 0; j<populacao; j++){
+
+
+            for(int j = 0; j<populacao; j++){
                 float mat_translation_ball[16] = {
                     1.0f, 0.0f, 0.0f, matriz_translado[j][0] ,
                     0.0f, 1.0f, 0.0f, matriz_translado[j][1] ,
@@ -847,18 +894,18 @@ float tempoteste = 0.00;
                     B=1.00;
 
                     /*
-                // enviando a matriz de transformacao para a GPU, vertex shader, variavel mat_transformation
-                loc = glGetUniformLocation(program, "mat_transformation");
-                glUniform4f(loc_color, R, G, B, 1.0); 
-                glUniformMatrix4fv(loc, 1, GL_TRUE, mat_translation_ball);
-                */
+                    // enviando a matriz de transformacao para a GPU, vertex shader, variavel mat_transformation
+                    loc = glGetUniformLocation(program, "mat_transformation");
+                    glUniform4f(loc_color, R, G, B, 1.0); 
+                    glUniformMatrix4fv(loc, 1, GL_TRUE, mat_translation_ball);
+                    */
 
                
-                //renderizando
-                //loc = glGetUniformLocation(program, "mat_transformation");
-                 glUniformMatrix4fv(loc, 1, GL_TRUE, mat_translation_ball);
-                glUniform4f(loc_color, R, G, B, 1.0);
-                glDrawArrays(GL_TRIANGLE_FAN, 0, 32);
+                    //renderizando
+                    //loc = glGetUniformLocation(program, "mat_transformation");
+                    glUniformMatrix4fv(loc, 1, GL_TRUE, mat_translation_ball);
+                    glUniform4f(loc_color, R, G, B, 1.0);
+                    glDrawArrays(GL_TRIANGLE_FAN, 0, 32);
                  
                 }else{
                     
@@ -874,45 +921,46 @@ float tempoteste = 0.00;
                 glDrawArrays(GL_TRIANGLE_FAN, 0, 32);
                 
 
-
-
             }
-
-
 
 
         }
 
             
        
-            // criando a matriz de translacao
+        // criando a matriz de translacao
             
-            float mat_translation_basket[16] = {
-                1.0f, 0.0f, 0.0f, 0.0f ,
-                0.0f, 1.0f, 0.0f, 0.0f ,
-                0.0f, 0.0f, 1.0f, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f
-            };
-
-           
+        float mat_translation_basket[16] = {
+            1.0f, 0.0f, 0.0f, 0.0f ,
+            0.0f, 1.0f, 0.0f, 0.0f ,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        };
 
 
-           
+        R=1;
+        G=1;
+        B=1;
+        glUniformMatrix4fv(loc, 1, GL_TRUE, mat_translation_basket);
+        glUniform4f(loc_color, R, G, B, 1.0); 
+        glDrawArrays(GL_LINES, 32, 2);
+        glfwSwapBuffers(window);
+        // Abaixo, nós enviamos todo o conteúdo da variável vertices.
+        //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+
         
-            R=1;
-            G=1;
-            B=1;
-            glUniformMatrix4fv(loc, 1, GL_TRUE, mat_translation_basket);
-            glUniform4f(loc_color, R, G, B, 1.0); 
-            glDrawArrays(GL_LINES, 32, 2);
-            glfwSwapBuffers(window);
-            // Abaixo, nós enviamos todo o conteúdo da variável vertices.
-            //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);   
-      
+
+
+        
+  
 
     }
+
+    fclose(arq_grafico);
     glfwDestroyWindow(window);
  
     glfwTerminate();
     exit(EXIT_SUCCESS);
+
 }
