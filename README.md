@@ -5,4 +5,4 @@
 
 -Atualmente funcionando da maneira mais básica, com elitismo e substituição de toda a geração
 
--Em breve atualizaçoes e refinamento dos metodos de crossover e criação da nova geração
+-Em breve atualizaçoes e refinamento dos métodos de crossover e criação da nova geração
