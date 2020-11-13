@@ -86,7 +86,7 @@ static void nova_geracao(){
     //MUTACAO E REARRANJO DA POPULACAO
     for(int j=0; j<populacao; j++){
 
-       // srand(time(NULL));
+       // srand(time(NULL)); srand null aqui faz com q todos os individuos tenham o msmo valor d chance d mutacao e gene mutado
        
 
          chance_mutacao = rand()%100;
