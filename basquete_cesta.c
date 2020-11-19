@@ -50,6 +50,64 @@ float g = 10;
     float pi = 3.14;
     float percent_mutacao = 0.02;
     int count_geracao = 1;
+    int predacao = 0;
+
+
+static void genocidio(){
+    srand((unsigned int)time(NULL));
+    float rand_theta = 90;
+    float rand_forca = 10;
+
+    int ind_melhor = vetor_melhor_todos[0];
+
+    for(int j=0; j<populacao; j++){
+        if(j!=ind_melhor){
+
+            vetor_theta[j]= ((float)rand()/(float)(RAND_MAX)) * rand_theta;
+            vetor_forca_original[j]= ((float)rand()/(float)(RAND_MAX)) * rand_forca;
+
+        }
+    }
+
+}
+
+
+static void pred_sintese(){
+
+    int ind_pior=0;
+    int ind_melhor = vetor_melhor_todos[0];
+    float media_forca=0;
+    float media_theta=0;
+
+    //acha o pior
+    for (int j=0; j<populacao-1; j++){
+        if(vetor_cesta_acerto[j]>vetor_cesta_acerto[j+1]){
+            ind_pior=j;
+        }
+
+    }
+    //faz uma media do resto da pop sem contar o melhor e o pior
+    for (int j=0; j<populacao; j++){
+        if(j!=ind_melhor && j!=ind_pior){
+            printf("valor forca %f\n",vetor_forca_original[j]);
+
+            media_forca = media_forca + vetor_forca_original[j];
+            media_theta = media_theta + vetor_theta[j];
+        }
+
+    }
+
+    media_forca = media_forca/(populacao-2); //media nao leva em consideracao melhor valor nem pior valor
+    media_theta = media_theta/(populacao-2);
+    printf("media f %f\nmedia t %f\n\n",media_forca, media_theta );
+
+    //substitui o pior pela sintese
+    vetor_forca_original[ind_pior]=media_forca;
+    vetor_theta[ind_pior] = media_theta;
+
+
+
+}
 
 static void nova_geracao(){
 
@@ -118,19 +176,14 @@ static void nova_geracao(){
 
          }
          
-
-
-
-
     }
 
 
 
-
-
-
-
 }
+
+
+
 
 
 // funcao para processar eventos de teclado
@@ -144,19 +197,43 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
     if(key==264) t_y -= 0.1; // tecla para baixo
 
     if(key==32 && action == GLFW_PRESS){
-         printf("\nGeracao %d\nTaxa de mutacao %f\nDistancia do melhor %f\n", count_geracao,percent_mutacao,vetor_melhor_todos[1]);
+        printf("\nGeracao %d\nTaxa de mutacao %f\nDistancia do melhor %f\n", count_geracao,percent_mutacao,vetor_melhor_todos[1]);
          //printf("Melhor[%f]: %f\n",vetor_melhor_todos[0], vetor_melhor_todos[1] );
         // printf("angulo %f forca %f\n",vetor_theta[(int)vetor_melhor_todos[0]], vetor_forca_original[(int)vetor_melhor_todos[0]] );
         count_geracao ++;
         
-        nova_geracao();
+       
 
-   for(int j=0; j<populacao;j++){
+        if(predacao == 5){
+            printf("pred number: %d\n",predacao );
+            printf("SINTESE\n");
+            pred_sintese();
+            predacao = predacao + 1;
+        }else{
+            if(predacao == 15){
+                
+                printf("pred number: %d\n",predacao );
+                printf("genocidio\n");
+                genocidio();
+                predacao = 0;
+            }else{
+                printf("pred number: %d\n",predacao );
+                printf("NOVA GERACAO\n");
+                nova_geracao();
+                predacao = predacao + 1;
+            }
+           
+        }
+        
+
+       
+
+        for(int j=0; j<populacao;j++){
 
             matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
             matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
 
-            matriz_tempo[j][0]=speed_time;  
+            matriz_tempo[j][0]=speed_time;
             matriz_tempo[j][1]=speed_time;
 
             matriz_pos_inicial[j][0]= -0.799995;
@@ -169,15 +246,17 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
 
             matriz_quina_acerto[j][0]=0;
 
-        
-       
+            
+           
 
-    }
+        }
 
    
     }
 
 }
+
+
 
  
 int main(void){
@@ -187,6 +266,8 @@ int main(void){
     char distancia_convertido[20];
     char indice_convertido[10];
     fprintf(arq_grafico,"0,1,2,3,4,5,6,7,8,9\n");
+
+   
     
 
     
@@ -669,7 +750,7 @@ int main(void){
    // printf("melhor de todos valor%f e indice: %f\n",vetor_melhor_todos[1],vetor_melhor_todos[0] );
 
     
-float tempoteste = 0.00;
+    float tempoteste = 0.00;
     while (!glfwWindowShouldClose(window) ){
 
         if(controle_print1 != count_geracao){// printar a primeira vez, dps ele printa no clique do espaço
@@ -691,26 +772,30 @@ float tempoteste = 0.00;
        // printf("TRANSLADO EM X DA BOLA 0: %f  TRANSLADO EM Y DA BOLA 0: %f\n",matriz_translado[0][0],matriz_translado[0][1] );
         tempoteste = tempoteste + 0.001;
       //printf("tempo %f\n",tempoteste );
+
+        
+
+
         glfwPollEvents();
 
-            glClear(GL_COLOR_BUFFER_BIT);
-            glClearColor(0.0, 0.0, 0.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.0, 0.0, 0.0, 1.0);
 
-            //glUniform4f(loc_color, R, G, B, 1.0); // modificando a cor do objeto!
-            //glDrawArrays(GL_LINE_LOOP, 0, 28);
+        //glUniform4f(loc_color, R, G, B, 1.0); // modificando a cor do objeto!
+        //glDrawArrays(GL_LINE_LOOP, 0, 28);
 
-            // enviando a matriz de transformacao para a GPU, vertex shader, variavel mat_transformation
-            loc = glGetUniformLocation(program, "mat_transformation");
+        // enviando a matriz de transformacao para a GPU, vertex shader, variavel mat_transformation
+        loc = glGetUniformLocation(program, "mat_transformation");
 
-            for(int j = 0; j<populacao;j++){
+        // for(int j = 0; j<populacao;j++){
 
-                float mat_translation_ball[16] = {
-                    1.0f, 0.0f, 0.0f, matriz_translado[j][0] ,
-                    0.0f, 1.0f, 0.0f, matriz_translado[j][1] ,
-                    0.0f, 0.0f, 1.0f, 0.0f,
-                    0.0f, 0.0f, 0.0f, 1.0f
-                };
-            }
+        //     float mat_translation_ball[16] = {
+        //         1.0f, 0.0f, 0.0f, matriz_translado[j][0] ,
+        //         0.0f, 1.0f, 0.0f, matriz_translado[j][1] ,
+        //         0.0f, 0.0f, 1.0f, 0.0f,
+        //         0.0f, 0.0f, 0.0f, 1.0f
+        //     };
+        // }
             
 
         
@@ -750,6 +835,7 @@ float tempoteste = 0.00;
                // if(vetor_cesta_acerto[j]<vetor_melhor_todos[1] ){
                 vetor_melhor_todos[0] = j;
                 vetor_melhor_todos[1] = vetor_cesta_acerto[j];
+                predacao = 0;
             }
             
             //calculo colisao com as quinas aqui se eu mudar a pos da cesta a pos das quinas nao muda
@@ -1047,6 +1133,26 @@ float tempoteste = 0.00;
         glfwSwapBuffers(window);
         // Abaixo, nós enviamos todo o conteúdo da variável vertices.
         //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+
+
+
+
+
+        // // se faz 20 geracoes q o melhor d todos nao muda eu predo o pior, se fizer 50 geracoes sem mudar o melhor eu mato a pop e soh deixo o melhor
+        // if(predacao == 20){
+        //     pred_sintese();
+        //     //predacao = 0;
+        // }else{
+        //     if(predacao == 50){
+        //         //aniquila_pop();
+        //         predacao = 0;
+        //     }else{
+        //         predacao = predacao + 1;
+        //     }
+           
+        // }
+
 
 
         
