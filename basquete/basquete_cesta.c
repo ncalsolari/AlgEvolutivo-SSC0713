@@ -7,8 +7,11 @@
 
 #define GLFW_INCLUDE_NONE
 #define GLFW_FALSE   0
-#define speed_time 0.005
+#define speed_time 0.01
 #define populacao  10
+#define testetotal 100
+#define posinicialX -0.9
+#define posinicialY -0.9
 
 
 #include <GLFW/glfw3.h> /* verifique no seu SO onde fica o glfw3.h */
@@ -39,26 +42,36 @@ float g = 10;
     float matriz_translado[populacao][2];
     float matriz_translado_parcial[populacao][2];
     float matriz_quina_acerto[populacao][1];
+    float matriz_resultado[4][testetotal]; // linhas: 1forca 2theta 3cestax 4cestay colunas: cestas em posicoes diferentes
     float vetor_forca_original[populacao];
     float vetor_theta[populacao];
     float vetor_cesta_acerto[populacao];
+    float vetor_distfinal[populacao];
+    float vetor_transldado_cesta[2];
     float vetor_cesta_acertotxt[populacao];
     float vetor_melhor_todos[2]; // coluna 0 o indice coluna 1 o valor
     float distanciax;
     float distanciay;
     float subindo[populacao];
+    float bolaviva[populacao];
     float pi = 3.14;
     float percent_mutacao = 0.02;
     int count_geracao = 1;
     int predacao = 0;
+    int count_genocidios = 0;
+    float tempoteste = 0.00;
+    int stop = 0;
+    int treinos = 0;
+
+
 
 
 static void genocidio(){
-    srand((unsigned int)time(NULL));
     float rand_theta = 90;
     float rand_forca = 10;
 
     int ind_melhor = vetor_melhor_todos[0];
+
 
     for(int j=0; j<populacao; j++){
         if(j!=ind_melhor){
@@ -80,10 +93,16 @@ static void pred_sintese(){
     float media_theta=0;
 
     //acha o pior
-    for (int j=0; j<populacao-1; j++){
-        if(vetor_cesta_acerto[j]>vetor_cesta_acerto[j+1]){
-            ind_pior=j;
+    for (int j=1; j<populacao; j++){
+
+        if(j!=ind_melhor){
+
+            if(vetor_distfinal[j]>vetor_distfinal[ind_pior]){
+             ind_pior=j;
+            }
+
         }
+        
 
     }
     //faz uma media do resto da pop sem contar o melhor e o pior
@@ -99,7 +118,7 @@ static void pred_sintese(){
 
     media_forca = media_forca/(populacao-2); //media nao leva em consideracao melhor valor nem pior valor
     media_theta = media_theta/(populacao-2);
-    printf("media f %f\nmedia t %f\n\n",media_forca, media_theta );
+    printf("ind pior: %d\n media f %f\nmedia t %f\n\n",ind_pior, media_forca, media_theta );
 
     //substitui o pior pela sintese
     vetor_forca_original[ind_pior]=media_forca;
@@ -183,6 +202,58 @@ static void nova_geracao(){
 }
 
 
+static void resetapop(){
+
+    printf("\nGeracao %d\nTaxa de mutacao %f\nDistancia do melhor %f\n", count_geracao,percent_mutacao,vetor_melhor_todos[1]);
+            count_geracao ++;
+           
+            tempoteste = 0;
+            pred_sintese();
+        
+
+            if(predacao == 15){
+                
+                printf("pred number: %d\n",predacao );
+                printf("genocidio\n");
+                genocidio();
+                count_genocidios += 1;
+                predacao = 0;
+            }else{
+                printf("pred number: %d\n",predacao );
+                printf("NOVA GERACAO\n");
+                nova_geracao();
+                predacao = predacao + 1;
+            }
+
+                printf("teste numero: %d\n", treinos );
+          
+
+            for(int j=0; j<populacao;j++){
+
+                matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+                matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+
+                matriz_tempo[j][0]=speed_time;
+                matriz_tempo[j][1]=speed_time;
+
+                matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
+                matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
+
+                matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
+                matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
+
+                subindo[j]=1;
+                bolaviva[j]=1;
+
+                matriz_quina_acerto[j][0]=0;
+                vetor_distfinal[j]=1000;
+
+            }
+
+
+
+
+}
 
 
 
@@ -193,17 +264,84 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
     if(key==262 && action == GLFW_PRESS) percent_mutacao += 0.01; // tecla para direita
     if(key==263 && action == GLFW_PRESS) percent_mutacao -= 0.01; // tecla para direita
 
-    if(key==265) t_y += 0.1; // tecla para cima
-    if(key==264) t_y -= 0.1; // tecla para baixo
+    if(key==265){// tecla para cima
+
+        vetor_transldado_cesta[1] += 0.1; // tecla para cima
+        vetor_melhor_todos[0]=-10;
+        vetor_melhor_todos[1]=1000000;
+        genocidio();
+        predacao = 0;
+
+        for(int j=0; j<populacao;j++){
+
+            matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+            matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+
+            matriz_tempo[j][0]=speed_time;
+            matriz_tempo[j][1]=speed_time;
+
+            matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
+            matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
+
+            matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
+            matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
+
+            subindo[j]=1;
+            bolaviva[j]=1;
+
+            matriz_quina_acerto[j][0]=0;
+            vetor_distfinal[j]=1000;
+
+            
+           
+
+        }
+
+    }
+
+    if(key==264){  // tecla para baixo
+
+        vetor_transldado_cesta[1] -= 0.1;
+        vetor_melhor_todos[0]=-10;
+        vetor_melhor_todos[1]=1000000;
+        genocidio();
+        predacao = 0;
+
+        for(int j=0; j<populacao;j++){
+
+            matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+            matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+
+            matriz_tempo[j][0]=speed_time;
+            matriz_tempo[j][1]=speed_time;
+
+            matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
+            matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
+
+            matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
+            matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
+
+            subindo[j]=1;
+            bolaviva[j]=1;
+
+            matriz_quina_acerto[j][0]=0;
+
+            
+           
+
+        }
+
+    }
 
     if(key==32 && action == GLFW_PRESS){
         printf("\nGeracao %d\nTaxa de mutacao %f\nDistancia do melhor %f\n", count_geracao,percent_mutacao,vetor_melhor_todos[1]);
          //printf("Melhor[%f]: %f\n",vetor_melhor_todos[0], vetor_melhor_todos[1] );
         // printf("angulo %f forca %f\n",vetor_theta[(int)vetor_melhor_todos[0]], vetor_forca_original[(int)vetor_melhor_todos[0]] );
         count_geracao ++;
+        tempoteste = 0;
         
-       
-
+    
+/*
         if(predacao == 5){
             printf("pred number: %d\n",predacao );
             printf("SINTESE\n");
@@ -224,7 +362,23 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
             }
            
         }
+        */
+        pred_sintese();
         
+
+        if(predacao == 15){
+            
+            printf("pred number: %d\n",predacao );
+            printf("genocidio\n");
+            genocidio();
+            predacao = 0;
+        }else{
+            printf("pred number: %d\n",predacao );
+            printf("NOVA GERACAO\n");
+            nova_geracao();
+            predacao = predacao + 1;
+        }
+    
 
        
 
@@ -236,15 +390,17 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
             matriz_tempo[j][0]=speed_time;
             matriz_tempo[j][1]=speed_time;
 
-            matriz_pos_inicial[j][0]= -0.799995;
-            matriz_pos_inicial[j][1]= -0.79415;
+            matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
+            matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
 
             matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
             matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
 
             subindo[j]=1;
+            bolaviva[j]=1;
 
             matriz_quina_acerto[j][0]=0;
+            vetor_distfinal[j]=1000;
 
             
            
@@ -261,16 +417,27 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
  
 int main(void){
 
+  
+    
+
     // abrindo arquivo
-    FILE *arq_grafico = fopen("graficoevolucao1.txt","w");
+    FILE *arq_grafico = fopen("graffinal.txt","w");
     char distancia_convertido[20];
     char indice_convertido[10];
     fprintf(arq_grafico,"0,1,2,3,4,5,6,7,8,9\n");
 
-   
-    
+    FILE *arq_result = fopen("resultados8.txt","w");
+    char forca_convertido[20];
+    char theta_convertido[20];
+    char tx_convertido[20];
+    char ty_convertido[20];
+    fprintf(arq_result,"0,1,2,3\n");
 
-    
+
+
+  
+
+
  
     // inicicializando o sistema de\ janelas
     glfwInit();
@@ -386,6 +553,7 @@ int main(void){
     }
     printf("vertice 0 x %f y %f", vertices[0].x, vertices[0].y);
 
+/*
             //cesta
             vertices[32].x = +0.40;
             vertices[32].y = +0.10;
@@ -439,42 +607,96 @@ int main(void){
             vertices[50].y = +(0.1-redey)/2;
             vertices[51].x = +0.475;
             vertices[51].y = +0.10;
+            */
+            //cesta
+            vertices[32].x = -0.075;
+            vertices[32].y = +0.00;
+            vertices[33].x = +0.075;
+            vertices[33].y = +0.00;
+
+            //tabela
+            vertices[34].x = +0.085;
+            vertices[34].y = -0.01;
+            vertices[35].x = +0.085;
+            vertices[35].y = +0.19;
+
+            float redey = 0.15;
+            //rede
+            vertices[36].x = -0.065;//41
+            vertices[36].y = +0.00;
+            vertices[37].x = -0.065;
+            vertices[37].y = -redey;
+
+            vertices[38].x = +0.065;//54
+            vertices[38].y = +0.00;
+            vertices[39].x = +0.065;
+            vertices[39].y = -redey;
+
+            vertices[40].x = -0.065;
+            vertices[40].y = +0.00;
+            vertices[41].x = +0.065;
+            vertices[41].y = -redey;
+
+            vertices[42].x = +0.065;
+            vertices[42].y = +0.00;
+            vertices[43].x = -0.065;
+            vertices[43].y = -redey;
+
+            vertices[44].x = +0.00;
+            vertices[44].y = +0.00;
+            vertices[45].x = -0.065;
+            vertices[45].y = -redey/2;
+
+            vertices[46].x = -0.065;
+            vertices[46].y = -redey/2;
+            vertices[47].x = +0.00;
+            vertices[47].y = -redey + 0.02;
+
+            vertices[48].x = +0.00;
+            vertices[48].y = -redey + 0.02;
+            vertices[49].x = +0.065;
+            vertices[49].y = -redey/2;
+
+            vertices[50].x = +0.065;
+            vertices[50].y = -redey/2;
+            vertices[51].x = +0.00;
+            vertices[51].y = +0.00;
+
+        GLuint buffer;
+        glGenBuffers(1, &buffer);
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
 
 
-    GLuint buffer;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        // Abaixo, nós enviamos todo o conteúdo da variável vertices.
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
 
-    // Abaixo, nós enviamos todo o conteúdo da variável vertices.
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+        // Associando variáveis do programa GLSL (Vertex Shaders) com nossos dados
+        GLint loc = glGetAttribLocation(program, "position");
+        glEnableVertexAttribArray(loc);
+        glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*) 0); // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glVertexAttribPointer.xhtml
+     
 
+        // Associando nossa janela com eventos de teclado
+        glfwSetKeyCallback(window, key_event); // teclado
 
-    // Associando variáveis do programa GLSL (Vertex Shaders) com nossos dados
-    GLint loc = glGetAttribLocation(program, "position");
-    glEnableVertexAttribArray(loc);
-    glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*) 0); // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glVertexAttribPointer.xhtml
- 
-
-    // Associando nossa janela com eventos de teclado
-    glfwSetKeyCallback(window, key_event); // teclado
-
-    // Exibindo nossa janela
-    glfwShowWindow(window);
+        // Exibindo nossa janela
+        glfwShowWindow(window);
+    
 
     //acho posicao do meio da cesta e do meio da bola
-    float cestax = (vertices[32].x + vertices[33].x) /2;
-    float cestay = (vertices[32].y + vertices[33].y) /2;
+    float cestax = (vertices[32].x + vertices[33].x) /2  + vetor_transldado_cesta[0];
+    float cestay = (vertices[32].y + vertices[33].y) /2  + vetor_transldado_cesta[1];
     float bolax = (vertices[0].x + vertices[16].x)/2 ;
     float bolay = vertices[0].y ; // nao estou mais gerando a bola na posicao inicial ver linha 221 e 285
-    float quinax1 = vertices[32].x;
-    float quinax2 = vertices[33].x;
-    float quinay1 = vertices[32].y;
-    float quinay2 = vertices[33].y;//na vdd quinay1 e quinay2 tem o msmo valor pq n tem cesta inclinada
-    float tabelax1 =vertices[34].x; //ponto de baixo da tabela
-    float tabelay1 =vertices[34].y;
-    float tabelax2 =vertices[35].x;//ponto de cima da tabela
-    float tabelay2 =vertices[35].y;
+    float quinax1 = vertices[32].x + vetor_transldado_cesta[0];
+    float quinax2 = vertices[33].x + vetor_transldado_cesta[0];
+    float quinay1 = vertices[32].y + vetor_transldado_cesta[1];
+    float quinay2 = vertices[33].y + vetor_transldado_cesta[1];//na vdd quinay1 e quinay2 tem o msmo valor pq n tem cesta inclinada
+    float tabelax1 =vertices[34].x + vetor_transldado_cesta[0]; //ponto de baixo da tabela
+    float tabelay1 =vertices[34].y + vetor_transldado_cesta[1];
+    float tabelax2 =vertices[35].x + vetor_transldado_cesta[0];//ponto de cima da tabela
+    float tabelay2 =vertices[35].y + vetor_transldado_cesta[1];
 
 
     // os valores iniciais sao guardados e os atuais sao atualizados assim como acontece com as coordenadas das figuras
@@ -492,212 +714,13 @@ int main(void){
     */
 
     
-
-    
-
-/* AQUI SE EU QUISER UMA ANALISE SEM DESENHAR QUE É MAIS RAPIDO POREM SEM A ANALISE VISUAL PRA ISSO EU USO ESSE TRECHO PRA IR SALVANDO
-    OS TRANSLADOS E AI DPS SOH PRINTO E MUDO O TRANSLADO
-    distanciax = 1000;
-    distanciay = 1000;
-
-    vetor_theta[0]=72.0;
-    vetor_theta[1]=90.0;
-    
-    vetor_forca_original[0]=5.4;
-    vetor_forca_original[1]=5.4;
-    //inicializar valores dos vetores
-
-    matriz_forca_atual[0][0]= cos(vetor_theta[0]*pi/180)*vetor_forca_original[0];
-    matriz_forca_atual[0][1]= sin(vetor_theta[0]*pi/180)*vetor_forca_original[0];
-
-    matriz_forca_atual[1][0]= cos(vetor_theta[1]*pi/180)*vetor_forca_original[1];
-    matriz_forca_atual[1][1]= sin(vetor_theta[1]*pi/180)*vetor_forca_original[1];
-
-    matriz_tempo[0][0]=speed_time;  
-    matriz_tempo[0][1]=speed_time;
-    matriz_tempo[1][0]=speed_time;  
-    matriz_tempo[1][1]=speed_time;  
-
-    matriz_pos_inicial[0][0]=-0.799995;
-    matriz_pos_inicial[0][1]= -0.79415;
-    matriz_pos_inicial[1][0]=-0.799995;
-    matriz_pos_inicial[1][1]= -0.79415;
-
-
-    matriz_translado[0][0] = matriz_pos_inicial[0][0] + matriz_forca_atual[0][0]*matriz_tempo[0][0];
-    matriz_translado[0][1] = matriz_pos_inicial[0][1] + matriz_forca_atual[0][1]*matriz_tempo[0][1] - g*matriz_tempo[0][1]*matriz_tempo[0][1]/2;
-
-    matriz_translado[1][0] = matriz_pos_inicial[1][0] + matriz_forca_atual[1][0]*matriz_tempo[1][0];
-    matriz_translado[1][1] = matriz_pos_inicial[1][1] + matriz_forca_atual[1][1]*matriz_tempo[1][1] - g*matriz_tempo[1][1]*matriz_tempo[1][1]/2;
-    vetor_melhor_todos[0]=11;
-    vetor_melhor_todos[1]=1000000;
-    for(int i = 0; i<1000; i++){
-
-        for(int j = 0; j<populacao; j++){
-
-            //atualizo o tempo
-            matriz_tempo[j][0]=matriz_tempo[j][0] + speed_time;  //tempo x
-            matriz_tempo[j][1]=matriz_tempo[j][1] + speed_time;  //tempo y
-
-            //atualizo as posicoes da bola e da cesta
-            matriz_cesta_atual[j][0]=cestax;
-            matriz_cesta_atual[j][1]=cestay;
-            matriz_bola_atual[j][0]=matriz_translado[j][0];
-            matriz_bola_atual[j][1]=matriz_translado[j][1];
-
-            //calculo a distancia entre a bola e o centro da cesta
-            distanciax = fabsf(matriz_cesta_atual[j][0]-matriz_bola_atual[j][0]);
-            distanciay = fabsf(matriz_cesta_atual[j][1]-matriz_bola_atual[j][1]);
-            vetor_cesta_acerto[j]= sqrt(distanciax*distanciax + distanciay*distanciay);
-            printf("indice melhor %f valor melhor:%f \n",vetor_melhor_todos[0],vetor_melhor_todos[1] );
-
-            //atualizo melhor de todos
-            if(vetor_cesta_acerto[j]<vetor_melhor_todos[1]){
-                //vetor_melhor_todos[0] = j;
-                //vetor_melhor_todos[1] = vetor_cesta_acerto[j];
-            }
-
-
-            //calculo colisao com as quinas aqui se eu mudar a pos da cesta a pos das quinas nao muda
-            float distancia_quina1;
-            float distancia_quina2;
-            distancia_quina1 = fabsf(quinax1 - matriz_bola_atual[j][0]) * fabsf(quinax1 - matriz_bola_atual[j][0]);
-            distancia_quina1 = distancia_quina1 + fabsf(quinay1 - matriz_bola_atual[j][1])*fabsf(quinay1 - matriz_bola_atual[j][1]);
-            distancia_quina1 = sqrt(distancia_quina1);
-
-            distancia_quina2 = fabsf(quinax2 - matriz_bola_atual[j][0]) * fabsf(quinax2 - matriz_bola_atual[j][0]);
-            distancia_quina2 = distancia_quina2 + fabsf(quinay2 - matriz_bola_atual[j][1])*fabsf(quinay2 - matriz_bola_atual[j][1]);
-            distancia_quina2 = sqrt(distancia_quina2);
-
-            //caso haja colisao ponho o quique da bola
-            if(distancia_quina1 < radius){
-
-                if(matriz_bola_atual[j][1]>quinay1){ // se a bola ta pra cima da quina entao o quique eh pra cima
-
-                    if(matriz_bola_atual[j][0]>quinax1){ // se a bola ta pra esquerda da quina entao o quique eh pra esquerda caso contrario pra direita
-                        matriz_forca_atual[j][0] = 0.7*matriz_forca_atual[j][0];
-                    }else{
-                        matriz_forca_atual[j][0] = -0.7*matriz_forca_atual[j][0];
-                    }
-
-                    matriz_forca_atual[j][1]= 0.7*matriz_forca_atual[j][1];
-                    matriz_tempo[j][0]=speed_time;
-                    matriz_tempo[j][1]=speed_time;
-                    matriz_pos_inicial[j][0]= matriz_translado[j][0];
-                    matriz_pos_inicial[j][1]= matriz_translado[j][1];
-
-
-                }
-
-                if(matriz_bola_atual[j][1]<quinay1){ // se a bola ta pra baixo da quina entao o quique eh pra baixo
-
-                    if(matriz_bola_atual[j][0]>quinax1){ // mesma analise acima
-                        matriz_forca_atual[j][0] = 0.7*matriz_forca_atual[j][0];
-                    }else{
-                        matriz_forca_atual[j][0] = -0.7*matriz_forca_atual[j][0];
-                    }
-
-                    matriz_forca_atual[j][1]= -0.7*matriz_forca_atual[j][1];
-                    matriz_tempo[j][0]=speed_time;
-                    matriz_tempo[j][1]=speed_time;
-                    matriz_pos_inicial[j][0]= matriz_translado[j][0];
-                    matriz_pos_inicial[j][1]= matriz_translado[j][1];
-
-
-                }
-
-            }
-
-
-            //repito pra quina 2
-            if(distancia_quina2 < radius){
-
-                if(matriz_bola_atual[j][1]>quinay1){ // se a bola ta pra cima da quina entao o quique eh pra cima
-
-                    if(matriz_bola_atual[j][0]>quinax1){ // se a bola ta pra esquerda da quina entao o quique eh pra esquerda caso contrario pra direita
-                        matriz_forca_atual[j][0] = 0.7*matriz_forca_atual[j][0];
-                    }else{
-                        matriz_forca_atual[j][0] = -0.7*matriz_forca_atual[j][0];
-                    }
-
-                    matriz_forca_atual[j][1]= 0.7*matriz_forca_atual[j][1];
-                    matriz_tempo[j][0]=speed_time;
-                    matriz_tempo[j][1]=speed_time;
-                    matriz_pos_inicial[j][0]= matriz_translado[j][0];
-                    matriz_pos_inicial[j][1]= matriz_translado[j][1];
-
-
-                }
-
-                if(matriz_bola_atual[j][1]<quinay1){ // se a bola ta pra baixo da quina entao o quique eh pra baixo
-
-                    if(matriz_bola_atual[j][0]>quinax1){ // mesma analise acima
-                        matriz_forca_atual[j][0] = 0.7*matriz_forca_atual[j][0];
-                    }else{
-                        matriz_forca_atual[j][0] = -0.7*matriz_forca_atual[j][0];
-                    }
-
-                    matriz_forca_atual[j][1]= -0.7*matriz_forca_atual[j][1];
-                    matriz_tempo[j][0]=speed_time;
-                    matriz_tempo[j][1]=speed_time;
-                    matriz_pos_inicial[j][0]= matriz_translado[j][0];
-                    matriz_pos_inicial[j][1]= matriz_translado[j][1];
-
-
-                }
-
-
-
-            }
-
-
-
-
-
-
-            //acrescento o movimento em x e y e o possivel quique com o chao
-            if(matriz_bola_atual[j][0] - radius < 1.0){
-
-                if(matriz_bola_atual[j][1] - radius  < -1.0){ //quique
-
-                    matriz_forca_atual[j][1] = 0.7*matriz_forca_atual[j][1];
-
-                   // vetor_forca_original[j]= fabsf(matriz_forca_atual[j][1]); eu ja pego 70% direto da forca atual
-                    matriz_tempo[j][1]=speed_time;
-                    matriz_pos_inicial[j][1]= matriz_translado[j][1];
-                }
-
-                if(fabsf(matriz_forca_atual[j][1]) > 0.005){ // se a força for grande o suficiente ele movimenta em y
-
-                   matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
-
-
-                }
-
-                //movimento em x
-                matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
-
-
-            }
-
-
-        
-
-
-
-
-
-
-
-
-        }
-    }
-*/
     GLint loc_color = glGetUniformLocation(program, "color");
 
     srand((unsigned int)time(NULL));
     float random_theta = 90;
     float random_forca = 10;
+
+    //inicia valores aleatorios de angulo e forca
     for(int j=0;j<populacao;j++){
 
         vetor_theta[j]= ((float)rand()/(float)(RAND_MAX)) * random_theta;
@@ -717,18 +740,20 @@ int main(void){
         matriz_tempo[j][0]=speed_time;  
         matriz_tempo[j][1]=speed_time;
 
-        matriz_pos_inicial[j][0]= -0.799995;
-        matriz_pos_inicial[j][1]= -0.79415;
+        matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
+        matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
 
         matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
         matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
 
         subindo[j]=1;
+        bolaviva[j]=1;
 
         matriz_quina_acerto[j][0]=0;
 
         vetor_cesta_acerto[j]=1000;
         vetor_cesta_acertotxt[j]=1000;
+        vetor_distfinal[j]=1000;
        
 
     }
@@ -744,14 +769,18 @@ int main(void){
     int controle_print1 = -1;
    
 
-    vetor_melhor_todos[0]=-10;
+    vetor_melhor_todos[0]=-10; 
     vetor_melhor_todos[1]=1000000;
+    vetor_transldado_cesta[0] = 0;
+    vetor_transldado_cesta[1] = 0;
 
    // printf("melhor de todos valor%f e indice: %f\n",vetor_melhor_todos[1],vetor_melhor_todos[0] );
 
     
-    float tempoteste = 0.00;
-    while (!glfwWindowShouldClose(window) ){
+
+    while (!glfwWindowShouldClose(window) && !stop ){
+
+
 
         if(controle_print1 != count_geracao){// printar a primeira vez, dps ele printa no clique do espaço
             for(int j=0;j<populacao;j++){
@@ -771,7 +800,6 @@ int main(void){
 
        // printf("TRANSLADO EM X DA BOLA 0: %f  TRANSLADO EM Y DA BOLA 0: %f\n",matriz_translado[0][0],matriz_translado[0][1] );
         tempoteste = tempoteste + 0.001;
-      //printf("tempo %f\n",tempoteste );
 
         
 
@@ -787,29 +815,26 @@ int main(void){
         // enviando a matriz de transformacao para a GPU, vertex shader, variavel mat_transformation
         loc = glGetUniformLocation(program, "mat_transformation");
 
-        // for(int j = 0; j<populacao;j++){
-
-        //     float mat_translation_ball[16] = {
-        //         1.0f, 0.0f, 0.0f, matriz_translado[j][0] ,
-        //         0.0f, 1.0f, 0.0f, matriz_translado[j][1] ,
-        //         0.0f, 0.0f, 1.0f, 0.0f,
-        //         0.0f, 0.0f, 0.0f, 1.0f
-        //     };
-        // }
-            
-
+        cestax = (vertices[32].x + vertices[33].x) /2  + vetor_transldado_cesta[0];
+        cestay = (vertices[32].y + vertices[33].y) /2  + vetor_transldado_cesta[1];
+        quinax1 = vertices[32].x + vetor_transldado_cesta[0];
+        quinax2 = vertices[33].x + vetor_transldado_cesta[0];
+        quinay1 = vertices[32].y + vetor_transldado_cesta[1];
+        quinay2 = vertices[33].y + vetor_transldado_cesta[1];//na vdd quinay1 e quinay2 tem o msmo valor pq n tem cesta inclinada
+        tabelax1 =vertices[34].x + vetor_transldado_cesta[0]; //ponto de baixo da tabela
+        tabelay1 =vertices[34].y + vetor_transldado_cesta[1];
+        tabelax2 =vertices[35].x + vetor_transldado_cesta[0];//ponto de cima da tabela
+        tabelay2 =vertices[35].y + vetor_transldado_cesta[1];
         
 
         for(int j = 0; j<populacao; j++){ 
-
-
-            
-           
+  
 
             //atualizo o tempo
             matriz_tempo[j][0]= matriz_tempo[j][0] + speed_time;  //tempo x
             matriz_tempo[j][1]= matriz_tempo[j][1] + speed_time;  //tempo y
 
+            //translado parcial eh o quanto ele movimnenta nessa iteracao
             matriz_translado_parcial[j][0] =  matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0]- matriz_translado[j][0];
             matriz_translado_parcial[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2 - matriz_translado[j][1];
           // printf("parcial x %f\n",matriz_translado_parcial[j][1] );
@@ -824,6 +849,10 @@ int main(void){
             float distanciax = fabsf(matriz_cesta_atual[j][0]-matriz_bola_atual[j][0]);
             float distanciay = fabsf(matriz_cesta_atual[j][1]-matriz_bola_atual[j][1]);
             vetor_cesta_acerto[j]= sqrt(distanciax*distanciax + distanciay*distanciay);
+
+            if(vetor_distfinal[j]>vetor_cesta_acerto[j]){
+                vetor_distfinal[j]=vetor_cesta_acerto[j];
+            }
            
             if(vetor_cesta_acerto[j]<vetor_cesta_acertotxt[j]){
                 vetor_cesta_acertotxt[j] = vetor_cesta_acerto[j]; //salvo os dados pra gerar o arquivo txt
@@ -831,12 +860,14 @@ int main(void){
             }
 
             //atualizo melhor de todos
-            if(vetor_cesta_acerto[j]<vetor_melhor_todos[1] && subindo[j] < 0){
+            if(vetor_cesta_acerto[j]<vetor_melhor_todos[1] && bolaviva[j] > 0 && subindo[j]<0){
                // if(vetor_cesta_acerto[j]<vetor_melhor_todos[1] ){
                 vetor_melhor_todos[0] = j;
                 vetor_melhor_todos[1] = vetor_cesta_acerto[j];
                 predacao = 0;
+                count_genocidios=0;
             }
+            //vetor_melhor_todos[1] = vetor_cesta_acerto[ vetor_melhor_todos[0];
             
             //calculo colisao com as quinas aqui se eu mudar a pos da cesta a pos das quinas nao muda
             float distancia_quina1;
@@ -1028,6 +1059,13 @@ int main(void){
                     subindo[j] = matriz_translado[j][1]- aux;// posicao menos a posicao anterior se der negativo ele ta descendo
                                                           // guardar essa info para nao aceitar cestas de baixo pra cima
 
+                    //se a bola ta subindo e ta embaixo do aro ela eh invalida
+                    if(subindo[j]>0 && (matriz_translado[j][0]>quinax1 && matriz_translado[j][0]<quinax2) && matriz_translado[j][1]<quinay1){
+                        bolaviva[j]=-1;
+                    }
+                        
+                    
+
                 }
 
                 //movimento em x
@@ -1042,6 +1080,7 @@ int main(void){
 
 
 
+            
 
 
             for(int j = 0; j<populacao; j++){
@@ -1096,8 +1135,8 @@ int main(void){
         // criando a matriz de translacao
             
         float mat_translation_basket[16] = {
-            1.0f, 0.0f, 0.0f, 0.0f ,
-            0.0f, 1.0f, 0.0f, 0.0f ,
+            1.0f, 0.0f, 0.0f,  vetor_transldado_cesta[0] ,
+            0.0f, 1.0f, 0.0f,  vetor_transldado_cesta[1] ,
             0.0f, 0.0f, 1.0f, 0.0f,
             0.0f, 0.0f, 0.0f, 1.0f
         };
@@ -1135,35 +1174,91 @@ int main(void){
         //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
 
-
-
-
-
-        // // se faz 20 geracoes q o melhor d todos nao muda eu predo o pior, se fizer 50 geracoes sem mudar o melhor eu mato a pop e soh deixo o melhor
-        // if(predacao == 20){
-        //     pred_sintese();
-        //     //predacao = 0;
-        // }else{
-        //     if(predacao == 50){
-        //         //aniquila_pop();
-        //         predacao = 0;
-        //     }else{
-        //         predacao = predacao + 1;
-        //     }
-           
-        // }
-
-
-
+        //reseta o lancamento sozinho
+        if(tempoteste > 0.2){
         
+            resetapop();
 
-
-        
+        }
   
+ 
+
+        //muda a cesta de lugar caso ja tenha sido cesta
+        if( vetor_melhor_todos[1]<0.015){//count_genocidios > 1 &&
+
+  
+             
+            //salvo os dados deste treino
+            matriz_resultado[0][treinos] = vetor_forca_original[(int)vetor_melhor_todos[0]];
+            matriz_resultado[1][treinos] = vetor_theta[(int)vetor_melhor_todos[0]];
+            matriz_resultado[2][treinos] = vetor_transldado_cesta[0];
+            matriz_resultado[3][treinos] = vetor_transldado_cesta[1];
+
+             
+            //converto os dados para char
+            sprintf(forca_convertido, "%.5f", matriz_resultado[0][treinos]);
+            sprintf(theta_convertido, "%.5f", matriz_resultado[1][treinos]);
+            sprintf(tx_convertido, "%.5f", matriz_resultado[2][treinos]);
+            sprintf(ty_convertido, "%.5f", matriz_resultado[3][treinos]);
+
+            //escrevo no arquivo
+            fprintf(arq_result,"%s,%s,%s,%s\n",forca_convertido,theta_convertido,tx_convertido,ty_convertido);
+    
+
+        
+
+            float random = 1.6;
+            
+            //gera um nmero aleatorio entre 0 e rand max, divide por rand max, nmero entre 0 e 1
+            //vezes o 1.6 (nmero entre 0 e 1.6), -0.8 nmero entre -0.8 e 0.8
+            vetor_transldado_cesta[0]= (((float)rand()/(float)(RAND_MAX)) * random) - 0.8; 
+            vetor_transldado_cesta[1]= (((float)rand()/(float)(RAND_MAX)) * random) - 0.8; 
+
+            //resetapop();
+            tempoteste=0;
+            vetor_melhor_todos[0]=-10;
+            vetor_melhor_todos[1]=1000000;
+            genocidio();
+            predacao = 0;
+
+            for(int j=0; j<populacao;j++){
+
+                matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+                matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+
+                matriz_tempo[j][0]=speed_time;
+                matriz_tempo[j][1]=speed_time;
+
+                matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
+                matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
+
+                matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
+                matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
+
+                subindo[j]=1;
+                bolaviva[j]=1;
+
+                matriz_quina_acerto[j][0]=0;
+                vetor_distfinal[j]=1000;
+      
+
+            }
+
+            treinos += 1;
+
+            if(treinos > testetotal){
+                stop = 1;
+            }
+
+               
+
+        }
+
 
     }
 
     fclose(arq_grafico);
+    fclose(arq_result);
     glfwDestroyWindow(window);
  
     glfwTerminate();
