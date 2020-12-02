@@ -1,5 +1,5 @@
 /* para linux, instalar os pacotes libglfw3-dev mesa-common-dev libglew-dev */
-/* para compilar no linux: gcc basquete_cesta.c -lglfw -lGL -lGLEW -lm -o basquete_cesta.bin */
+/* para compilar no linux: gcc basquete_final.c -lglfw -lGL -lGLEW -lm -o basquete_final.bin */
 
 
 
@@ -12,6 +12,8 @@
 #define testetotal 100
 #define posinicialX -0.9
 #define posinicialY -0.9
+#define g 10
+#define pi 3.14
 
 
 #include <GLFW/glfw3.h> /* verifique no seu SO onde fica o glfw3.h */
@@ -19,6 +21,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "time.h"
+#include "basq_final.h"
 
  
 
@@ -29,389 +32,39 @@ typedef struct{
 } coordenadas;
 
 
-float t_x = 0.0f; 
-float t_y = 0.0f;
-
-
-float g = 10;
-
-    float matriz_pos_inicial[populacao][2]; // cada linha um individuo, coluna 0 = x coluna 1 = y
-    float matriz_tempo[populacao][2];
-    float matriz_forca_atual[populacao][2];
-    float matriz_cesta_atual[populacao][2];
-    float matriz_bola_atual[populacao][2];
-    float matriz_translado[populacao][2];
-    float matriz_translado_parcial[populacao][2];
-    float matriz_quina_acerto[populacao][1];
-    float matriz_resultado[4][testetotal]; // linhas: 1forca 2theta 3cestax 4cestay colunas: cestas em posicoes diferentes
-    float vetor_forca_original[populacao];
-    float vetor_theta[populacao];
-    float vetor_cesta_acerto[populacao];
-    float vetor_distfinal[populacao];
-    float vetor_transldado_cesta[2];
-    float vetor_cesta_acertotxt[populacao];
-    float vetor_melhor_todos[2]; // coluna 0 o indice coluna 1 o valor
-    float distanciax;
-    float distanciay;
-    float subindo[populacao];
-    float bolaviva[populacao];
-    float pi = 3.14;
-    float percent_mutacao = 0.02;
-    int count_geracao = 1;
-    int predacao = 0;
-    int count_genocidios = 0;
-    float tempoteste = 0.00;
-    int stop = 0;
-    int treinos = 0;
-
-
-
-
-static void genocidio(){
-    float rand_theta = 90;
-    float rand_forca = 10;
-
-    int ind_melhor = vetor_melhor_todos[0];
-
-
-    for(int j=0; j<populacao; j++){
-        if(j!=ind_melhor){
-
-            vetor_theta[j]= ((float)rand()/(float)(RAND_MAX)) * rand_theta;
-            vetor_forca_original[j]= ((float)rand()/(float)(RAND_MAX)) * rand_forca;
-
-        }
-    }
-
-}
-
-
-static void pred_sintese(){
-
-    int ind_pior=0;
-    int ind_melhor = vetor_melhor_todos[0];
-    float media_forca=0;
-    float media_theta=0;
-
-    //acha o pior
-    for (int j=1; j<populacao; j++){
-
-        if(j!=ind_melhor){
-
-            if(vetor_distfinal[j]>vetor_distfinal[ind_pior]){
-             ind_pior=j;
-            }
-
-        }
-        
-
-    }
-    //faz uma media do resto da pop sem contar o melhor e o pior
-    for (int j=0; j<populacao; j++){
-        if(j!=ind_melhor && j!=ind_pior){
-            printf("valor forca %f\n",vetor_forca_original[j]);
-
-            media_forca = media_forca + vetor_forca_original[j];
-            media_theta = media_theta + vetor_theta[j];
-        }
-
-    }
-
-    media_forca = media_forca/(populacao-2); //media nao leva em consideracao melhor valor nem pior valor
-    media_theta = media_theta/(populacao-2);
-    printf("ind pior: %d\n media f %f\nmedia t %f\n\n",ind_pior, media_forca, media_theta );
-
-    //substitui o pior pela sintese
-    vetor_forca_original[ind_pior]=media_forca;
-    vetor_theta[ind_pior] = media_theta;
-
-
-
-}
-
-static void nova_geracao(){
-
-
-    printf("melhor[%.0f]: %f\n\n\n",vetor_melhor_todos[0], vetor_melhor_todos[1] );
-    int ind_melhor;
-    float theta_melhor;
-    float forca_melhor;
-    int chance_mutacao;
-    int gene_mutado;
-    srand(time(NULL));
-
-    ind_melhor = vetor_melhor_todos[0];
-
-    //PEGO DADOS DO MELHOR
-    theta_melhor = vetor_theta[ind_melhor];
-    forca_melhor = vetor_forca_original[ind_melhor];
-
-    //CROSSOVER
-    for(int j = 0; j<populacao; j++){
-
-
-
-        if(j!= ind_melhor){
-            vetor_cesta_acerto[j]=100; //zero a avaliacao 
-           // vetor_cesta_acertotxt[j]=100; //zero a avaliacao 
-            vetor_theta[j]= (vetor_theta[j] + theta_melhor) / 2;
-            vetor_forca_original[j]= (vetor_forca_original[j] + forca_melhor)/2;
-        }
-
-
-    }
-    
-    //MUTACAO E REARRANJO DA POPULACAO
-    for(int j=0; j<populacao; j++){
-
-       // srand(time(NULL)); srand null aqui faz com q todos os individuos tenham o msmo valor d chance d mutacao e gene mutado
-       
-
-         chance_mutacao = rand()%100;
-         gene_mutado = rand()%100;
-        
-        
-  
-
-         
-         if(j != ind_melhor){
-
-            if(gene_mutado<=50){//MUTAR O THETA
-
-            if(chance_mutacao<=50){ //50% D CHANCE D MUTAR PRA MAIS OU PRA MENOS
-                vetor_theta[j]=vetor_theta[j]*(1 + percent_mutacao);
-            }else{
-                vetor_theta[j]=vetor_theta[j]*(1- percent_mutacao);
-            }
-
-         }else{//MUDAR A FORCA
-
-            if(chance_mutacao<=50){ //50% D CHANCE D MUTAR PRA MAIS OU PRA MENOS
-                vetor_forca_original[j]=vetor_forca_original[j]*(1 + percent_mutacao);
-            }else{
-                vetor_forca_original[j]=vetor_forca_original[j]*(1 - percent_mutacao);
-            }
-
-         }
-
-         }
-         
-    }
-
-
-
-}
-
-
-static void resetapop(){
-
-    printf("\nGeracao %d\nTaxa de mutacao %f\nDistancia do melhor %f\n", count_geracao,percent_mutacao,vetor_melhor_todos[1]);
-            count_geracao ++;
-           
-            tempoteste = 0;
-            pred_sintese();
-        
-
-            if(predacao == 15){
-                
-                printf("pred number: %d\n",predacao );
-                printf("genocidio\n");
-                genocidio();
-                count_genocidios += 1;
-                predacao = 0;
-            }else{
-                printf("pred number: %d\n",predacao );
-                printf("NOVA GERACAO\n");
-                nova_geracao();
-                predacao = predacao + 1;
-            }
-
-                printf("teste numero: %d\n", treinos );
-          
-
-            for(int j=0; j<populacao;j++){
-
-                matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-                matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-
-                matriz_tempo[j][0]=speed_time;
-                matriz_tempo[j][1]=speed_time;
-
-                matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
-                matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
-
-                matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
-                matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
-
-                subindo[j]=1;
-                bolaviva[j]=1;
-
-                matriz_quina_acerto[j][0]=0;
-                vetor_distfinal[j]=1000;
-
-            }
-
-
-
-
-}
-
-
-
-// funcao para processar eventos de teclado
-static void key_event(GLFWwindow* window, int key, int scancode, int action, int mods){
-   
-
-    if(key==262 && action == GLFW_PRESS) percent_mutacao += 0.01; // tecla para direita
-    if(key==263 && action == GLFW_PRESS) percent_mutacao -= 0.01; // tecla para direita
-
-    if(key==265){// tecla para cima
-
-        vetor_transldado_cesta[1] += 0.1; // tecla para cima
-        vetor_melhor_todos[0]=-10;
-        vetor_melhor_todos[1]=1000000;
-        genocidio();
-        predacao = 0;
-
-        for(int j=0; j<populacao;j++){
-
-            matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-            matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-
-            matriz_tempo[j][0]=speed_time;
-            matriz_tempo[j][1]=speed_time;
-
-            matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
-            matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
-
-            matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
-            matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
-
-            subindo[j]=1;
-            bolaviva[j]=1;
-
-            matriz_quina_acerto[j][0]=0;
-            vetor_distfinal[j]=1000;
-
-            
-           
-
-        }
-
-    }
-
-    if(key==264){  // tecla para baixo
-
-        vetor_transldado_cesta[1] -= 0.1;
-        vetor_melhor_todos[0]=-10;
-        vetor_melhor_todos[1]=1000000;
-        genocidio();
-        predacao = 0;
-
-        for(int j=0; j<populacao;j++){
-
-            matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-            matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-
-            matriz_tempo[j][0]=speed_time;
-            matriz_tempo[j][1]=speed_time;
-
-            matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
-            matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
-
-            matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
-            matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
-
-            subindo[j]=1;
-            bolaviva[j]=1;
-
-            matriz_quina_acerto[j][0]=0;
-
-            
-           
-
-        }
-
-    }
-
-    if(key==32 && action == GLFW_PRESS){
-        printf("\nGeracao %d\nTaxa de mutacao %f\nDistancia do melhor %f\n", count_geracao,percent_mutacao,vetor_melhor_todos[1]);
-         //printf("Melhor[%f]: %f\n",vetor_melhor_todos[0], vetor_melhor_todos[1] );
-        // printf("angulo %f forca %f\n",vetor_theta[(int)vetor_melhor_todos[0]], vetor_forca_original[(int)vetor_melhor_todos[0]] );
-        count_geracao ++;
-        tempoteste = 0;
-        
-    
-/*
-        if(predacao == 5){
-            printf("pred number: %d\n",predacao );
-            printf("SINTESE\n");
-            pred_sintese();
-            predacao = predacao + 1;
-        }else{
-            if(predacao == 15){
-                
-                printf("pred number: %d\n",predacao );
-                printf("genocidio\n");
-                genocidio();
-                predacao = 0;
-            }else{
-                printf("pred number: %d\n",predacao );
-                printf("NOVA GERACAO\n");
-                nova_geracao();
-                predacao = predacao + 1;
-            }
-           
-        }
-        */
-        pred_sintese();
-        
-
-        if(predacao == 15){
-            
-            printf("pred number: %d\n",predacao );
-            printf("genocidio\n");
-            genocidio();
-            predacao = 0;
-        }else{
-            printf("pred number: %d\n",predacao );
-            printf("NOVA GERACAO\n");
-            nova_geracao();
-            predacao = predacao + 1;
-        }
-    
-
-       
-
-        for(int j=0; j<populacao;j++){
-
-            matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-            matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-
-            matriz_tempo[j][0]=speed_time;
-            matriz_tempo[j][1]=speed_time;
-
-            matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
-            matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
-
-            matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
-            matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
-
-            subindo[j]=1;
-            bolaviva[j]=1;
-
-            matriz_quina_acerto[j][0]=0;
-            vetor_distfinal[j]=1000;
-
-            
-           
-
-        }
-
-   
-    }
-
-}
+// float t_x = 0.0f; 
+// float t_y = 0.0f;
+
+
+
+float matriz_pos_inicial[populacao][2]; // cada linha um individuo, coluna 0 = x coluna 1 = y
+float matriz_tempo[populacao][2];
+float matriz_forca_atual[populacao][2];
+float matriz_cesta_atual[populacao][2];
+float matriz_bola_atual[populacao][2];
+float matriz_translado[populacao][2];
+float matriz_translado_parcial[populacao][2];
+float matriz_quina_acerto[populacao][1];
+float matriz_resultado[4][testetotal]; // linhas: 1forca 2theta 3cestax 4cestay colunas: cestas em posicoes diferentes
+float vetor_forca_original[populacao];
+float vetor_theta[populacao];
+float vetor_cesta_acerto[populacao];
+float vetor_distfinal[populacao];
+float vetor_transldado_cesta[2];
+float vetor_cesta_acertotxt[populacao];
+float vetor_melhor_todos[2]; // coluna 0 o indice coluna 1 o valor
+float distanciax;
+float distanciay;
+float subindo[populacao];
+float bolaviva[populacao];
+
+float percent_mutacao = 0.02;
+int count_geracao = 1;
+int predacao = 0;
+int count_genocidios = 0;
+float tempoteste = 0.00;
+int stop = 0;
+int treinos = 0;
 
 
 

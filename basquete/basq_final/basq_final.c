@@ -1,5 +1,5 @@
 /* para linux, instalar os pacotes libglfw3-dev mesa-common-dev libglew-dev */
-/* para compilar no linux: gcc basquete_cesta.c -lglfw -lGL -lGLEW -lm -o basquete_cesta.bin */
+/* para compilar no linux: gcc basq_final.c -lglfw -lGL -lGLEW -lm -o basq_final.bin */
 
 
 
@@ -8,10 +8,12 @@
 #define GLFW_INCLUDE_NONE
 #define GLFW_FALSE   0
 #define speed_time 0.01
-#define populacao  10
+#define populacao  1
 #define testetotal 100
 #define posinicialX -0.9
 #define posinicialY -0.9
+#define num_k 1
+    
 
 
 #include <GLFW/glfw3.h> /* verifique no seu SO onde fica o glfw3.h */
@@ -33,38 +35,170 @@ float t_x = 0.0f;
 float t_y = 0.0f;
 
 
+
+float matriz_pos_inicial[populacao][2]; // cada linha um individuo, coluna 0 = x coluna 1 = y
+float matriz_tempo[populacao][2];
+float matriz_forca_atual[populacao][2];
+float matriz_cesta_atual[populacao][2];
+float matriz_bola_atual[populacao][2];
+float matriz_translado[populacao][2];
+float matriz_translado_parcial[populacao][2];
+float matriz_quina_acerto[populacao][1];
+float matriz_resultado[4][testetotal]; // linhas: 1forca 2theta 3cestax 4cestay colunas: cestas em posicoes diferentes
+float vetor_forca_original[populacao];
+float vetor_theta[populacao];
+float vetor_cesta_acerto[populacao];
+float vetor_distfinal[populacao];
+float vetor_transldado_cesta[2];
+float vetor_cesta_acertotxt[populacao];
+float vetor_melhor_todos[2]; // coluna 0 o indice coluna 1 o valor
+float distanciax;
+float distanciay;
+float subindo[populacao];
+float bolaviva[populacao];
+float pi = 3.14;
 float g = 10;
-
-    float matriz_pos_inicial[populacao][2]; // cada linha um individuo, coluna 0 = x coluna 1 = y
-    float matriz_tempo[populacao][2];
-    float matriz_forca_atual[populacao][2];
-    float matriz_cesta_atual[populacao][2];
-    float matriz_bola_atual[populacao][2];
-    float matriz_translado[populacao][2];
-    float matriz_translado_parcial[populacao][2];
-    float matriz_quina_acerto[populacao][1];
-    float matriz_resultado[4][testetotal]; // linhas: 1forca 2theta 3cestax 4cestay colunas: cestas em posicoes diferentes
-    float vetor_forca_original[populacao];
-    float vetor_theta[populacao];
-    float vetor_cesta_acerto[populacao];
-    float vetor_distfinal[populacao];
-    float vetor_transldado_cesta[2];
-    float vetor_cesta_acertotxt[populacao];
-    float vetor_melhor_todos[2]; // coluna 0 o indice coluna 1 o valor
-    float distanciax;
-    float distanciay;
-    float subindo[populacao];
-    float bolaviva[populacao];
-    float pi = 3.14;
-    float percent_mutacao = 0.02;
-    int count_geracao = 1;
-    int predacao = 0;
-    int count_genocidios = 0;
-    float tempoteste = 0.00;
-    int stop = 0;
-    int treinos = 0;
+float percent_mutacao = 0.02;
+int count_geracao = 1;
+int predacao = 0;
+int count_genocidios = 0;
+float tempoteste = 0.00;
+int stop = 0;
+int treinos = 0;
 
 
+void knn(){
+
+
+    //PASSO O TXT COM OS DADOS PARA UMA MATRIZ
+    // abrindo arquivo
+    FILE *arqteste = fopen("tabelaresultados.txt","r");
+    float M[555][4];
+    int f = 0;
+    int g = 0;
+  
+    while(feof(arqteste)==0){
+
+        fscanf(arqteste, "%f", &M[f][g]);
+
+        g ++;
+        if(g == 4){
+            f++;
+            g=0;
+        }else{
+            fseek(arqteste,1,SEEK_CUR);
+        }
+
+
+    }
+
+    fclose(arqteste);
+
+    // for(int i=0;i<555;i++){
+    //  for(int j=0;j<4;j++){
+    //      printf("%f ",M[i][j] );
+    //  }
+
+    //  printf("\n");
+    // }
+
+
+    //INSTANCIO E ZERO A MATRIZ Q VAI GUARDAR AS DISTANCIAS DOS TESTE COM OS TREINOS        
+    float k_dist[555];
+
+   
+    for(int j=0;j<555;j++){
+        k_dist[j]=10;
+    }
+        
+    
+
+    //PRA CADA TESTE EU CALCULO A DISTANCIA DELE COM OS OUTROS 555 VALROES D TREINO(COM EXCESSAO AOS DADOS Q EU PEGUEI PRA TESTE)  
+    float a;
+    float b;
+    for(int j=0; j<555 ; j++){//555
+        
+        //k_dist[i][j]=0;
+        //printf("%f\n", k_dist[i][j]);
+        //k_dist[i][j]=sqrt(pow(fabs(Mteste[i][2] - M[j][2]),2) + pow(fabs(Mteste[i][3] - M[j][3]),2));
+        k_dist[j]=sqrtf(pow(fabs(vetor_transldado_cesta[0] - M[j][2]),2) + pow(fabs(vetor_transldado_cesta[1] - M[j][3]),2));
+        a=pow(fabs(vetor_transldado_cesta[0]  - M[j][2]),2) ;
+        b=pow(fabs(vetor_transldado_cesta[1] - M[j][3]),2);
+        //printf("A %f  B %f\n",a,b );
+        //printf("%f   \n",pow(fabs(M[ind_teste[i]][2] - M[j][2]),2) + pow(fabs(Mteste[ind_teste[i]][3] - M[j][3]),2));
+        //  printf("%f   %f\n",fabs(M[ind_teste[i]][3] - M[j][3]), pow(fabs(M[ind_teste[i]][3] - M[j][2]),3));
+        //printf("%f\n", k_dist[i][j]);
+
+    
+        
+        //printf("%f \n",k_dist[i][j] );
+
+    }
+
+    
+
+    //VASCULHO OS K VALORES COM MENOR DISTANCIA GUARDO O INDICE Q ELE C REFERE DA MATRIZ PRINCIPAL 
+    typedef struct{
+        int indice;
+        float valor;
+    } struct_menores;
+
+    struct_menores menoresK[num_k];
+    int ind_menor=0;
+
+
+
+    for(int k=0; k<num_k; k++){
+
+        ind_menor=0;
+
+        for(int j=1; j<555; j++){
+
+            if(k_dist[j]<k_dist[ind_menor]){
+                ind_menor=j;
+            }
+            
+
+        }
+
+        menoresK[k].valor= k_dist[ind_menor];
+        menoresK[k].indice=ind_menor;
+        //printf("ind %d k %d %f \n",ind_menor,k,k_dist[i][ind_menor] );
+        k_dist[ind_menor] = 10; //aqui eu aumento o valor do menor pra na proxima iteracao ele pegar o segundo menor valor e dps o terceiro menor valor e assim por diante
+
+    }
+        
+
+
+
+    //PRA CADA TESTE EU PEGO OS K MENORES VALROES DA MATRIZ INICIAL PELO INDICE Q SALVEI NO PASSO ANTERIOR E CALCULO A MEDIA
+    //PONHO ESSE VALOR COMO SENDO O VALOR PRO TESTE
+    float medianovovalor[2];
+    float mediaf=0;
+    float mediatheta=0;
+    int ind_media;
+
+   
+    for(int j=0; j<num_k; j++){
+        ind_media=menoresK[j].indice;
+        mediaf = mediaf + M[ind_media][0];
+        mediatheta = mediatheta +  M[ind_media][1];
+
+    }
+
+    mediaf = mediaf/num_k;
+    mediatheta = mediatheta/num_k;
+
+    vetor_forca_original[0]=mediaf;
+    vetor_theta[0]=mediatheta;
+
+    printf("\n%f %f\n",mediaf, mediatheta );
+    medianovovalor[0]=mediaf;
+    medianovovalor[1]=mediatheta;
+
+    
+
+}
 
 
 static void genocidio(){
@@ -209,24 +343,27 @@ static void resetapop(){
             count_geracao ++;
            
             tempoteste = 0;
-            pred_sintese();
+           // pred_sintese();
         
 
-            if(predacao == 15){
+            // if(predacao == 15){
                 
-                printf("pred number: %d\n",predacao );
-                printf("genocidio\n");
-                genocidio();
-                count_genocidios += 1;
-                predacao = 0;
-            }else{
-                printf("pred number: %d\n",predacao );
-                printf("NOVA GERACAO\n");
-                nova_geracao();
-                predacao = predacao + 1;
-            }
+            //     printf("pred number: %d\n",predacao );
+            //     printf("genocidio\n");
+            //     genocidio();
+            //     count_genocidios += 1;
+            //     predacao = 0;
+            // }else{
+            //     printf("pred number: %d\n",predacao );
+            //     printf("NOVA GERACAO\n");
+            //     nova_geracao();
+            //     predacao = predacao + 1;
+            // }
 
                 printf("teste numero: %d\n", treinos );
+
+
+            knn();
           
 
             for(int j=0; j<populacao;j++){
@@ -342,7 +479,7 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
         tempoteste = 0;
         
     
-/*
+      /*
         if(predacao == 5){
             printf("pred number: %d\n",predacao );
             printf("SINTESE\n");
@@ -415,11 +552,13 @@ static void key_event(GLFWwindow* window, int key, int scancode, int action, int
 
 
 
- 
+
+
+
+
 int main(void){
 
   
-    
 
     // abrindo arquivo
     FILE *arq_grafico = fopen("graffinal.txt","w");
@@ -436,10 +575,6 @@ int main(void){
 
 
 
-  
-
-
- 
     // inicicializando o sistema de\ janelas
     glfwInit();
 
@@ -554,135 +689,81 @@ int main(void){
     }
     printf("vertice 0 x %f y %f", vertices[0].x, vertices[0].y);
 
-/*
-            //cesta
-            vertices[32].x = +0.40;
-            vertices[32].y = +0.10;
-            vertices[33].x = +0.55;
-            vertices[33].y = +0.10;
 
-            //tabela
-            vertices[34].x = +0.56;
-            vertices[34].y = +0.07;
-            vertices[35].x = +0.56;
-            vertices[35].y = +0.27;
+    //cesta
+    vertices[32].x = -0.075;
+    vertices[32].y = +0.00;
+    vertices[33].x = +0.075;
+    vertices[33].y = +0.00;
 
-            float redey = 0.06;
-            //rede
-            vertices[36].x = +0.41;
-            vertices[36].y = +0.10;
-            vertices[37].x = +0.41;
-            vertices[37].y = -redey;
+    //tabela
+    vertices[34].x = +0.085;
+    vertices[34].y = -0.01;
+    vertices[35].x = +0.085;
+    vertices[35].y = +0.19;
 
-            vertices[38].x = +0.54;
-            vertices[38].y = +0.10;
-            vertices[39].x = +0.54;
-            vertices[39].y = -redey;
+    float redey = 0.15;
+    //rede
+    vertices[36].x = -0.065;//41
+    vertices[36].y = +0.00;
+    vertices[37].x = -0.065;
+    vertices[37].y = -redey;
 
-            vertices[40].x = +0.41;
-            vertices[40].y = +0.10;
-            vertices[41].x = +0.54;
-            vertices[41].y = -redey;
+    vertices[38].x = +0.065;//54
+    vertices[38].y = +0.00;
+    vertices[39].x = +0.065;
+    vertices[39].y = -redey;
 
-            vertices[42].x = +0.54;
-            vertices[42].y = +0.10;
-            vertices[43].x = +0.41;
-            vertices[43].y = -redey;
+    vertices[40].x = -0.065;
+    vertices[40].y = +0.00;
+    vertices[41].x = +0.065;
+    vertices[41].y = -redey;
 
-            vertices[44].x = +0.475;
-            vertices[44].y = +0.10;
-            vertices[45].x = +0.41;
-            vertices[45].y = +(0.1-redey)/2;
+    vertices[42].x = +0.065;
+    vertices[42].y = +0.00;
+    vertices[43].x = -0.065;
+    vertices[43].y = -redey;
 
-            vertices[46].x = +0.41;
-            vertices[46].y = +(0.1-redey)/2;
-            vertices[47].x = +0.475;
-            vertices[47].y = -redey + 0.02;
+    vertices[44].x = +0.00;
+    vertices[44].y = +0.00;
+    vertices[45].x = -0.065;
+    vertices[45].y = -redey/2;
 
-            vertices[48].x = +0.475;
-            vertices[48].y = -redey + 0.02;
-            vertices[49].x = +0.54;
-            vertices[49].y = +(0.1-redey)/2;
+    vertices[46].x = -0.065;
+    vertices[46].y = -redey/2;
+    vertices[47].x = +0.00;
+    vertices[47].y = -redey + 0.02;
 
-            vertices[50].x = +0.54;
-            vertices[50].y = +(0.1-redey)/2;
-            vertices[51].x = +0.475;
-            vertices[51].y = +0.10;
-            */
-            //cesta
-            vertices[32].x = -0.075;
-            vertices[32].y = +0.00;
-            vertices[33].x = +0.075;
-            vertices[33].y = +0.00;
+    vertices[48].x = +0.00;
+    vertices[48].y = -redey + 0.02;
+    vertices[49].x = +0.065;
+    vertices[49].y = -redey/2;
 
-            //tabela
-            vertices[34].x = +0.085;
-            vertices[34].y = -0.01;
-            vertices[35].x = +0.085;
-            vertices[35].y = +0.19;
+    vertices[50].x = +0.065;
+    vertices[50].y = -redey/2;
+    vertices[51].x = +0.00;
+    vertices[51].y = +0.00;
 
-            float redey = 0.15;
-            //rede
-            vertices[36].x = -0.065;//41
-            vertices[36].y = +0.00;
-            vertices[37].x = -0.065;
-            vertices[37].y = -redey;
-
-            vertices[38].x = +0.065;//54
-            vertices[38].y = +0.00;
-            vertices[39].x = +0.065;
-            vertices[39].y = -redey;
-
-            vertices[40].x = -0.065;
-            vertices[40].y = +0.00;
-            vertices[41].x = +0.065;
-            vertices[41].y = -redey;
-
-            vertices[42].x = +0.065;
-            vertices[42].y = +0.00;
-            vertices[43].x = -0.065;
-            vertices[43].y = -redey;
-
-            vertices[44].x = +0.00;
-            vertices[44].y = +0.00;
-            vertices[45].x = -0.065;
-            vertices[45].y = -redey/2;
-
-            vertices[46].x = -0.065;
-            vertices[46].y = -redey/2;
-            vertices[47].x = +0.00;
-            vertices[47].y = -redey + 0.02;
-
-            vertices[48].x = +0.00;
-            vertices[48].y = -redey + 0.02;
-            vertices[49].x = +0.065;
-            vertices[49].y = -redey/2;
-
-            vertices[50].x = +0.065;
-            vertices[50].y = -redey/2;
-            vertices[51].x = +0.00;
-            vertices[51].y = +0.00;
-
-        GLuint buffer;
-        glGenBuffers(1, &buffer);
-        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    GLuint buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
 
 
-        // Abaixo, nós enviamos todo o conteúdo da variável vertices.
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+    // Abaixo, nós enviamos todo o conteúdo da variável vertices.
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
 
-        // Associando variáveis do programa GLSL (Vertex Shaders) com nossos dados
-        GLint loc = glGetAttribLocation(program, "position");
-        glEnableVertexAttribArray(loc);
-        glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*) 0); // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glVertexAttribPointer.xhtml
-     
+    // Associando variáveis do programa GLSL (Vertex Shaders) com nossos dados
+    GLint loc = glGetAttribLocation(program, "position");
+    glEnableVertexAttribArray(loc);
+    glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*) 0); // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glVertexAttribPointer.xhtml
+ 
 
-        // Associando nossa janela com eventos de teclado
-        glfwSetKeyCallback(window, key_event); // teclado
+    // Associando nossa janela com eventos de teclado
+    glfwSetKeyCallback(window, key_event); // teclado
 
-        // Exibindo nossa janela
-        glfwShowWindow(window);
+    // Exibindo nossa janela
+    glfwShowWindow(window);
     
 
     //acho posicao do meio da cesta e do meio da bola
@@ -730,6 +811,13 @@ int main(void){
 
     }
 
+    vetor_melhor_todos[0]=-10; 
+    vetor_melhor_todos[1]=1000000;
+    vetor_transldado_cesta[0] = 0;
+    vetor_transldado_cesta[1] = 0;
+
+
+    knn();
 
     //inicializar valores dos vetores
 
@@ -770,11 +858,7 @@ int main(void){
     int controle_print1 = -1;
    
 
-    vetor_melhor_todos[0]=-10; 
-    vetor_melhor_todos[1]=1000000;
-    vetor_transldado_cesta[0] = 0;
-    vetor_transldado_cesta[1] = 0;
-
+    
    // printf("melhor de todos valor%f e indice: %f\n",vetor_melhor_todos[1],vetor_melhor_todos[0] );
 
     
@@ -802,7 +886,7 @@ int main(void){
        // printf("TRANSLADO EM X DA BOLA 0: %f  TRANSLADO EM Y DA BOLA 0: %f\n",matriz_translado[0][0],matriz_translado[0][1] );
         tempoteste = tempoteste + 0.001;
 
-        
+      
 
 
         glfwPollEvents();
@@ -868,6 +952,9 @@ int main(void){
                 predacao = 0;
                 count_genocidios=0;
             }
+
+        // vetor_melhor_todos[0] = j;
+        // vetor_melhor_todos[1] = vetor_cesta_acerto[j];
             //vetor_melhor_todos[1] = vetor_cesta_acerto[ vetor_melhor_todos[0];
             
             //calculo colisao com as quinas aqui se eu mudar a pos da cesta a pos das quinas nao muda
@@ -1177,36 +1264,6 @@ int main(void){
 
         //reseta o lancamento sozinho
         if(tempoteste > 0.2){
-        
-            resetapop();
-
-        }
-  
- 
-
-        //muda a cesta de lugar caso ja tenha sido cesta
-        if( vetor_melhor_todos[1]<0.015){//count_genocidios > 1 &&
-
-  
-             
-            //salvo os dados deste treino
-            matriz_resultado[0][treinos] = vetor_forca_original[(int)vetor_melhor_todos[0]];
-            matriz_resultado[1][treinos] = vetor_theta[(int)vetor_melhor_todos[0]];
-            matriz_resultado[2][treinos] = vetor_transldado_cesta[0];
-            matriz_resultado[3][treinos] = vetor_transldado_cesta[1];
-
-             
-            //converto os dados para char
-            sprintf(forca_convertido, "%.5f", matriz_resultado[0][treinos]);
-            sprintf(theta_convertido, "%.5f", matriz_resultado[1][treinos]);
-            sprintf(tx_convertido, "%.5f", matriz_resultado[2][treinos]);
-            sprintf(ty_convertido, "%.5f", matriz_resultado[3][treinos]);
-
-            //escrevo no arquivo
-            fprintf(arq_result,"%s,%s,%s,%s\n",forca_convertido,theta_convertido,tx_convertido,ty_convertido);
-    
-
-        
 
             float random = 1.6;
             
@@ -1214,46 +1271,88 @@ int main(void){
             //vezes o 1.6 (nmero entre 0 e 1.6), -0.8 nmero entre -0.8 e 0.8
             vetor_transldado_cesta[0]= (((float)rand()/(float)(RAND_MAX)) * random) - 0.8; 
             vetor_transldado_cesta[1]= (((float)rand()/(float)(RAND_MAX)) * random) - 0.8; 
-
-            //resetapop();
             tempoteste=0;
+            
+
+        
+            resetapop();
+
             vetor_melhor_todos[0]=-10;
             vetor_melhor_todos[1]=1000000;
-            genocidio();
-            predacao = 0;
-
-            for(int j=0; j<populacao;j++){
-
-                matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-                matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
-
-                matriz_tempo[j][0]=speed_time;
-                matriz_tempo[j][1]=speed_time;
-
-                matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
-                matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
-
-                matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
-                matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
-
-                subindo[j]=1;
-                bolaviva[j]=1;
-
-                matriz_quina_acerto[j][0]=0;
-                vetor_distfinal[j]=1000;
-      
-
-            }
-
-            treinos += 1;
-
-            if(treinos > testetotal){
-                stop = 1;
-            }
-
-               
 
         }
+  
+ 
+
+        //muda a cesta de lugar caso ja tenha sido cesta
+        // if( vetor_melhor_todos[1]<0.015){//count_genocidios > 1 &&
+
+
+             
+        //     //salvo os dados deste treino
+        //     matriz_resultado[0][treinos] = vetor_forca_original[(int)vetor_melhor_todos[0]];
+        //     matriz_resultado[1][treinos] = vetor_theta[(int)vetor_melhor_todos[0]];
+        //     matriz_resultado[2][treinos] = vetor_transldado_cesta[0];
+        //     matriz_resultado[3][treinos] = vetor_transldado_cesta[1];
+
+             
+        //     //converto os dados para char
+        //     // sprintf(forca_convertido, "%.5f", matriz_resultado[0][treinos]);
+        //     // sprintf(theta_convertido, "%.5f", matriz_resultado[1][treinos]);
+        //     // sprintf(tx_convertido, "%.5f", matriz_resultado[2][treinos]);
+        //     // sprintf(ty_convertido, "%.5f", matriz_resultado[3][treinos]);
+
+        //     // //escrevo no arquivo
+        //     // fprintf(arq_result,"%s,%s,%s,%s\n",forca_convertido,theta_convertido,tx_convertido,ty_convertido);
+
+
+        
+
+        //     float random = 1.6;
+            
+        //     //gera um nmero aleatorio entre 0 e rand max, divide por rand max, nmero entre 0 e 1
+        //     //vezes o 1.6 (nmero entre 0 e 1.6), -0.8 nmero entre -0.8 e 0.8
+        //     vetor_transldado_cesta[0]= (((float)rand()/(float)(RAND_MAX)) * random) - 0.8; 
+        //     vetor_transldado_cesta[1]= (((float)rand()/(float)(RAND_MAX)) * random) - 0.8; 
+
+        //     //resetapop();
+        //     tempoteste=0;
+        //     vetor_melhor_todos[0]=-10;
+        //     vetor_melhor_todos[1]=1000000;
+        //     genocidio();
+        //     knn();
+        //     predacao = 0;
+
+        //     for(int j=0; j<populacao;j++){
+
+        //         matriz_forca_atual[j][0]= cos(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+        //         matriz_forca_atual[j][1]= sin(vetor_theta[j]*pi/180)*vetor_forca_original[j];
+
+        //         matriz_tempo[j][0]=speed_time;
+        //         matriz_tempo[j][1]=speed_time;
+
+        //         matriz_pos_inicial[j][0]= posinicialX; //-0.799995;
+        //         matriz_pos_inicial[j][1]= posinicialY; //-0.79415;
+
+        //         matriz_translado[j][0] = matriz_pos_inicial[j][0] + matriz_forca_atual[j][0]*matriz_tempo[j][0];
+        //         matriz_translado[j][1] = matriz_pos_inicial[j][1] + matriz_forca_atual[j][1]*matriz_tempo[j][1] - g*matriz_tempo[j][1]*matriz_tempo[j][1]/2;
+
+        //         subindo[j]=1;
+        //         bolaviva[j]=1;
+
+        //         matriz_quina_acerto[j][0]=0;
+        //         vetor_distfinal[j]=1000;
+      
+
+        //     }
+
+        //     treinos += 1;
+
+        //     if(treinos > testetotal){
+        //         stop = 1;
+        //     }        
+
+        // }
 
 
     }
