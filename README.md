@@ -6,3 +6,7 @@
 -Atualmente funcionando da maneira mais básica, com elitismo e substituição de toda a geração
 
 -Em breve atualizaçoes e refinamento dos métodos de crossover e criação da nova geração
+
+
+### Versão finalizada e polida =]
+https://github.com/ncalsolari/BasqueteEvolutivo
